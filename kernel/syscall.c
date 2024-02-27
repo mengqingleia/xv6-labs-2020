@@ -8,6 +8,7 @@
 #include "defs.h"
 
 // Fetch the uint64 at addr from the current process.
+// 从当前进程中获取addr处的uint64。
 int
 fetchaddr(uint64 addr, uint64 *ip)
 {
@@ -20,7 +21,9 @@ fetchaddr(uint64 addr, uint64 *ip)
 }
 
 // Fetch the nul-terminated string at addr from the current process.
+// 从当前进程中获取addr处以nul结尾的字符串。
 // Returns length of string, not including nul, or -1 for error.
+// 返回字符串的长度，不包括nul，或-1表示错误。
 int
 fetchstr(uint64 addr, char *buf, int max)
 {
@@ -54,6 +57,7 @@ argraw(int n)
 }
 
 // Fetch the nth 32-bit system call argument.
+// 获取第n个32位系统调用参数。
 int
 argint(int n, int *ip)
 {
@@ -62,8 +66,10 @@ argint(int n, int *ip)
 }
 
 // Retrieve an argument as a pointer.
+// 检索作为指针的参数。
 // Doesn't check for legality, since
 // copyin/copyout will do that.
+//不检查合法性，因为copyin/copyout会这样做。
 int
 argaddr(int n, uint64 *ip)
 {
@@ -72,8 +78,11 @@ argaddr(int n, uint64 *ip)
 }
 
 // Fetch the nth word-sized system call argument as a null-terminated string.
+// 获取第n个单词大小的系统调用参数作为以null结尾的字符串。
 // Copies into buf, at most max.
+// 最多复制到buf中。
 // Returns string length if OK (including nul), -1 if error.
+// 如果OK（包括nul），则返回字符串长度；如果错误，则返回-1。
 int
 argstr(int n, char *buf, int max)
 {
@@ -104,6 +113,8 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
+extern uint64 sys_trace(void);//mql add
+extern uint64 sys_sysinfo(void);//mql add
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,6 +138,16 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_trace]   sys_trace,//mql add
+[SYS_sysinfo]   sys_sysinfo,//mql add
+};
+
+static char *syscall_names[] = {
+  "", "fork", "exit", "wait", "pipe", 
+  "read", "kill", "exec", "fstat", "chdir", 
+  "dup", "getpid", "sbrk", "sleep", "uptime", 
+  "open", "write", "mknod", "unlink", "link", 
+  "mkdir", "close", "trace", "sysinfo",
 };
 
 void
@@ -138,6 +159,11 @@ syscall(void)
   num = p->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
+    ////Start  从a7读取系统调用的编号，将1<<num与进程的mask比较，相等则打印
+    if((1 << num) & (p->mask)) {
+      printf("%d: syscall %s -> %d\n", p->pid, syscall_names[num], p->trapframe->a0);
+    }
+
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);

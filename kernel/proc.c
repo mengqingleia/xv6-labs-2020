@@ -262,12 +262,13 @@ fork(void)
   struct proc *np;
   struct proc *p = myproc();
 
-  // Allocate process.
+  // Allocate process.分配过程。
   if((np = allocproc()) == 0){
     return -1;
   }
-
-  // Copy user memory from parent to child.
+  // 子进程复制父进程的mask
+  np->mask = p->mask;
+  // Copy user memory from parent to child.将用户内存从父级复制到子级。
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
     release(&np->lock);
@@ -277,7 +278,7 @@ fork(void)
 
   np->parent = p;
 
-  // copy saved user registers.
+  // copy saved user registers.复制保存的用户注册。
   *(np->trapframe) = *(p->trapframe);
 
   // Cause fork to return 0 in the child.
@@ -692,4 +693,23 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+//mql add
+//获取非UNUSED进程数
+uint64
+nproc(void) {
+    struct proc *p;
+    uint64 num = 0;
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+
+      if(p->state != UNUSED) {
+        num++;
+      }
+      release(&p->lock);
+    }
+    return num;
+
 }

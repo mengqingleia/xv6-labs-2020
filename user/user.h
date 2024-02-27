@@ -1,5 +1,6 @@
 struct stat;
 struct rtcdate;
+struct sysinfo;//mql add
 
 // system calls
 int fork(void);
@@ -23,6 +24,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int trace(int);//mql add
+int sysinfo(struct sysinfo*);//mql add
 
 // ulib.c
 int stat(const char*, struct stat*);
